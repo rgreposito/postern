@@ -1,0 +1,16 @@
+/bin/
+/dist/
+/cover.out
+*.exe
+*.test
+*.out
+.DS_Store
+.env
+.env.*
+!.env.example
+vendor/
+sdk/typescript/node_modules/
+sdk/typescript/dist/
+.idea/
+.vscode/
+*.swp

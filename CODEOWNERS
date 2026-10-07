@@ -1,0 +1,8 @@
+# Policy and cert minting are the blast radius. PRs that touch these
+# should not land on a Friday without a second pair of eyes — even if
+# that pair of eyes is just me tomorrow.
+*                         @rgreposito
+/internal/policy/         @rgreposito
+/internal/certs/          @rgreposito
+/internal/ticket/         @rgreposito
+/policies/                @rgreposito
