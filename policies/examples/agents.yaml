@@ -1,0 +1,42 @@
+# Agent grants. Same evaluator as humans and workloads.
+# An agent that can call kubectl is a principal. Treat it like one.
+version: 1
+grants:
+  - id: soc-splunk-query
+    comment: SOC triage agent, logs only, no ticket contents, no exfil
+    principal:
+      kind: agent
+      match: agent://soc-*
+    action: invoke
+    resource: mcp://splunk.*
+    max_ttl: 5m
+    constraints:
+      data_classes: [security-logs]
+      deny_exfil: true
+      max_rows: 500
+      tools:
+        - splunk.query
+        - splunk.stats
+
+  - id: soc-jira-comment
+    principal:
+      kind: agent
+      match: agent://soc-triage
+    action: invoke
+    resource: mcp://jira.add_comment
+    max_ttl: 2m
+    constraints:
+      data_classes: [security-tickets]
+      deny_exfil: true
+
+  - id: finops-metrics
+    principal:
+      kind: agent
+      match: agent://finops-rightsize
+    action: invoke
+    resource: mcp://prom.query
+    max_ttl: 10m
+    constraints:
+      data_classes: [metrics]
+      deny_exfil: true
+      max_rows: 2000

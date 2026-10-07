@@ -1,0 +1,40 @@
+# Example policy. First matching grant wins — put the tight ones first.
+version: 1
+grants:
+  - id: payments-ledger-db
+    comment: workload identity only, never a human password
+    principal:
+      kind: workload
+      match: spiffe://prod/ns/payments/**
+    action: connect
+    resource: tcp://ledger-db.prod.internal:5432
+    max_ttl: 15m
+    require:
+      - network: "10.8.*"
+    record_session: true
+
+  - id: sre-bastion
+    principal:
+      kind: human
+      match: "*@corp.example"
+    action: ssh
+    resource: ssh://bastion.prod.internal
+    max_ttl: 45m
+    require:
+      - mfa: webauthn
+      - device_posture: ok
+    record_session: true
+
+  - id: sre-read-only-kube
+    principal:
+      kind: human
+      match: "sre-*@corp.example"
+    action: exec
+    resource: k8s://prod/ns/payments/**
+    max_ttl: 20m
+    require:
+      - mfa: webauthn
+      - device_posture: ok
+
+  # catch-all deny is implicit. if you feel the urge to add
+  # principal.match: "**" here, sit on your hands.
