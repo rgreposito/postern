@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "postern.name" . | default "postern" }}
+  labels:
+    app: postern
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: postern
+  template:
+    metadata:
+      labels:
+        app: postern
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postern
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["-policy", "/policy/prod.yaml"]
+          env:
+            - name: POSTERN_LISTEN
+              value: {{ .Values.listen | quote }}
+            - name: POSTERN_FAIL_CLOSED
+              value: {{ .Values.failClosed | quote }}
+            - name: POSTERN_TICKET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingTicketSecret }}
+                  key: key
+          ports:
+            - containerPort: 8443
+              name: http
+          volumeMounts:
+            - name: policy
+              mountPath: /policy
+              readOnly: true
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: policy
+          configMap:
+            name: postern-policy

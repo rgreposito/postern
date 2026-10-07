@@ -1,0 +1,6 @@
+apiVersion: v2
+name: postern
+description: Just-in-time access broker control plane
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
