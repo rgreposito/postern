@@ -81,6 +81,25 @@ func run() int {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	hup := make(chan os.Signal, 1)
+	signal.Notify(hup, syscall.SIGHUP)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-hup:
+				next, err := policy.LoadFile(cfg.PolicyPath)
+				if err != nil {
+					log.Error("reload", "err", err)
+					continue
+				}
+				b.Reload(next)
+				log.Info("reload", "grants", len(next.Grants), "path", cfg.PolicyPath)
+			}
+		}
+	}()
+
 	go func() {
 		t := time.NewTicker(cfg.SweepEvery)
 		defer t.Stop()

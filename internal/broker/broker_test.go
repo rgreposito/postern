@@ -114,3 +114,38 @@ func TestUnknownPrincipalDenied(t *testing.T) {
 		t.Fatal("expected deny")
 	}
 }
+
+func TestReloadSwapsDocument(t *testing.T) {
+	b := testBroker(t)
+	next, err := policy.Parse([]byte(`
+version: 1
+grants:
+  - id: staging-only
+    principal: {kind: workload, match: spiffe://staging/**}
+    action: connect
+    resource: tcp://db.prod:5432
+    max_ttl: 1m
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.Reload(next)
+	_, err = b.Grant(context.Background(), GrantInput{
+		Kind:      "workload",
+		Principal: "spiffe://prod/ns/pay/sa/ledger",
+		Action:    "connect",
+		Resource:  "tcp://db.prod:5432",
+	})
+	if err == nil {
+		t.Fatal("old grant should be gone after reload")
+	}
+	out, err := b.Grant(context.Background(), GrantInput{
+		Kind:      "workload",
+		Principal: "spiffe://staging/ns/pay/sa/ledger",
+		Action:    "connect",
+		Resource:  "tcp://db.prod:5432",
+	})
+	if err != nil || !out.Allowed {
+		t.Fatalf("staging should be allowed after reload: %v %+v", err, out)
+	}
+}

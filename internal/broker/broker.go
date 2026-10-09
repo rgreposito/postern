@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/rgreposito/postern/internal/audit"
@@ -46,6 +47,7 @@ type GrantOutput struct {
 }
 
 type Broker struct {
+	mu      sync.RWMutex
 	doc     *policy.Document
 	store   *session.Store
 	ca      *certs.CA
@@ -94,7 +96,9 @@ func (b *Broker) Grant(_ context.Context, in GrantInput) (GrantOutput, error) {
 		WantRows:      in.WantRows,
 		Exfil:         in.Exfil,
 	}
+	b.mu.RLock()
 	dec := b.doc.Evaluate(req)
+	b.mu.RUnlock()
 	now := b.now()
 	if !dec.Allow {
 		_ = b.audit.MustEmit(audit.Event{
@@ -202,5 +206,10 @@ func (b *Broker) Revoke(_ context.Context, sessionID string) error {
 }
 
 func (b *Broker) Reload(doc *policy.Document) {
+	if doc == nil {
+		return
+	}
+	b.mu.Lock()
 	b.doc = doc
+	b.mu.Unlock()
 }
